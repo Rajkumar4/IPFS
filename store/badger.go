@@ -2,6 +2,7 @@ package store
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -56,10 +57,11 @@ func unMarshal(data []byte, ex *exchange) error {
 
 var log = logger.Logger("badger")
 
-func genCid(val []byte) ([]byte, error) {
+func genCid(val []byte) (string, error) {
 	hash := sha256.New()
-
-	return hash.Sum(val), nil
+	hash.Write(val)
+	en := base64.URLEncoding.EncodeToString(hash.Sum(nil))
+	return en, nil
 }
 
 func DBIntialization() (*badger.DB, error) {
@@ -72,8 +74,8 @@ func DBIntialization() (*badger.DB, error) {
 	return db, nil
 }
 
-func (ss *StoreConf) Create(item Item) ([]byte, error) {
-	var id []byte
+func (ss *StoreConf) Create(item Item) (string, error) {
+	var id string
 	err := ss.DB.Update(func(tx *badger.Txn) error {
 		file, ok := item.(*File)
 		if !ok {
@@ -93,11 +95,7 @@ func (ss *StoreConf) Create(item Item) ([]byte, error) {
 			log.Errorf("Failed to get cid %s", err.Error())
 			return err
 		}
-		if err != nil {
-			log.Errorf("Failed to get byte string %s", err.Error())
-			return err
-		}
-		entry := badger.NewEntry(hash, value)
+		entry := badger.NewEntry([]byte(hash), value)
 		err = tx.SetEntry(entry)
 		if err != nil {
 			log.Errorf("Failed to set entry in database %s", err.Error())
@@ -116,15 +114,12 @@ func (ss *StoreConf) Create(item Item) ([]byte, error) {
 func (ss *StoreConf) Read(item Item) (Item, error) {
 	var ex = &exchange{}
 	err := ss.DB.View(func(tx *badger.Txn) error {
-		key, err := marhsal(&exchange{
-			name: item.GetID(),
-		})
-		if err != nil {
-			log.Errorf("Failed to marshal key %s", err.Error())
-			return err
+		f, ok := item.(*ContentBased)
+		if !ok {
+			return errors.New("item is not type of file")
 		}
 
-		value, err := tx.Get(key)
+		value, err := tx.Get([]byte(f.Id))
 		if err != nil {
 			log.Errorf("Failed to get item from db %s", err.Error())
 			return err

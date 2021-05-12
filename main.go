@@ -27,6 +27,18 @@ func main() {
 		return
 	}
 	client := serv.NewAddContentClient(conn)
+	if *id != "" {
+		peer := &serv.Peer{
+			Cid: *id,
+		}
+		result, err := client.FindPeer(ctx, peer)
+		if err != nil {
+			log.Errorf("Failed to find peer and fetch value %s", err.Error())
+			return
+		}
+		fmt.Printf("File is retrived %s", result.Id)
+		return 
+	}
 
 	if *name != "" {
 		f := &serv.Fileinfo{
@@ -38,18 +50,9 @@ func main() {
 			return
 		}
 		fmt.Printf("Id of file is %s", id.Id)
+		return
 	}
 
-	if *id == "" {
-		peer := &serv.Peer{
-			Cid: *id,
-		}
-		result, err := client.FindPeer(ctx, peer)
-		if err != nil {
-			log.Errorf("Failed to find peer and fetch value %s", err.Error())
-			return
-		}
-		fmt.Printf("File is retrived %s", result.Id)
-	}
+	
 
 }

@@ -3,7 +3,6 @@ package lib
 import (
 	"context"
 
-	"github.com/ipfs/go-cid"
 	logger "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -81,10 +80,6 @@ func InitPeer() (*LibConfig, error) {
 		log.Errorf("Failed to connect third node %s", err.Error())
 		return nil, err
 	}
-
-	net := netPeer.Network()
-	pids := net.Peers()
-	log.Errorf("%s", pids)
 	dh, err := dht.New(ctx, netPeer)
 	if err != nil {
 		log.Errorf("Failed to get dht %s", err.Error())
@@ -93,8 +88,8 @@ func InitPeer() (*LibConfig, error) {
 	return &LibConfig{ctx: ctx, dh: dh}, nil
 }
 
-func (lc *LibConfig) SetCid(cid []byte) error {
-	err := lc.dh.Host().Peerstore().Put(lc.dh.Host().ID(), string(cid), cid)
+func (lc *LibConfig) SetCid(cid string) error {
+	err := lc.dh.Host().Peerstore().Put(lc.dh.Host().ID(), cid, cid)
 	if err != nil {
 		log.Errorf("Failed to put cid in dht %s", err)
 		return err
@@ -102,10 +97,10 @@ func (lc *LibConfig) SetCid(cid []byte) error {
 	return nil
 }
 
-func (lc *LibConfig) FindPeers(cid cid.Cid) error {
-	_, err := lc.dh.GetValue(lc.ctx, cid.Hash().B58String())
+func (lc *LibConfig) FindPeers(cid string) error {
+	_, err := lc.dh.SearchValue(lc.ctx, cid)
 	if err != nil {
-		log.Errorf("failed to get cid from network %s", err.Error())
+		log.Errorf("Failed to get cid from network %s", err.Error())
 		return err
 	}
 	return nil

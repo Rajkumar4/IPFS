@@ -12,8 +12,6 @@ import (
 	"ipfs/m/v2/store"
 
 	badger "github.com/dgraph-io/badger/v3"
-	"github.com/golang/protobuf/proto"
-	"github.com/ipfs/go-cid"
 	logger "github.com/ipfs/go-log/v2"
 	"google.golang.org/grpc"
 )
@@ -30,7 +28,7 @@ type server struct {
 }
 
 func main() {
-	// logger.SetLogLevel("*", "debug")
+	logger.SetLogLevel("*", "debug")
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", port))
 	if err != nil {
 		log.Errorf("Failed to create server %s", err)
@@ -65,13 +63,12 @@ func (sr *server) AddFile(ctx context.Context, f *serv.Fileinfo) (*serv.Id, erro
 		log.Errorf("Failed to store in db %s", err.Error())
 		return nil, err
 	}
-	id := &serv.Id{}
-	err = proto.Unmarshal(cid, id)
+	err = sr.dht.SetCid(cid)
 	if err != nil {
-		log.Errorf("Failed to unmarshal data %s", err.Error())
+		log.Errorf("Failed to replicatein network %s", err.Error())
 		return nil, err
 	}
-	log.Errorf("string %s", id.Id)
+	id := &serv.Id{Id: cid}
 	return id, nil
 }
 
@@ -82,12 +79,8 @@ func (sr *server) FindPeer(ctx context.Context, peer *serv.Peer) (*serv.Id, erro
 	sc := &store.StoreConf{
 		DB: sr.DB,
 	}
-	id, err := cid.Cast([]byte(peer.Cid))
-	if err != nil {
-		log.Errorf("Failed to convert into cid %s", err.Error())
-		return nil, err
-	}
-	err = sr.dht.FindPeers(id)
+
+	err := sr.dht.FindPeers(peer.Cid)
 	if err != nil {
 		log.Errorf("Failed to find cid in network %s", err.Error())
 		return nil, err
