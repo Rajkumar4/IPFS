@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+message Fileinfo {
+    string filename = 1;
+    string cid      = 2;
+}
+
+message Id {
+    string id = 1;
+}
+
+message peer{
+    string cid = 1;
+}
+
+service addContent {
+    rpc AddFile (Fileinfo) returns (Id);
+    rpc FindPeer (peer) returns (Id);
+}
